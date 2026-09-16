@@ -44,7 +44,8 @@ export async function POST(req: Request) {
       stage = "sheet";
       const csv = await getFaqData();
       stage = "model";
-      const answer = await askGemini("ร้านเปิดกี่โมง", csv);
+      const question = typeof body.question === "string" && body.question.length <= 200 ? body.question : "มีเมนูเครื่องดื่มอะไร ราคาเท่าไหร่";
+      const answer = await askGemini(question, csv);
       return json({ storage: "ok", sheet: "ok", model: answer !== DEFAULT_REPLY ? "ok" : "fallback", answer, enabled: process.env.BOT_ENABLED === "true" });
     } catch (error) {
       const status = error && typeof error === "object" && "status" in error ? Number(error.status) : undefined;
