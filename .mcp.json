@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "line-oa": {
+      "command": "/opt/homebrew/bin/node",
+      "args": ["mcp-server/index.mjs"]
+    }
+  }
+}

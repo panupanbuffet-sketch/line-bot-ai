@@ -33,3 +33,42 @@ export async function replyMessage(
     messages: [{ type: "text", text: text.slice(0, 4900) }],
   });
 }
+
+export async function pushMessage(to: string, text: string): Promise<void> {
+  await getClient().pushMessage({
+    to,
+    messages: [{ type: "text", text: text.slice(0, 4900) }],
+  });
+}
+
+export async function multicastMessage(
+  to: string[],
+  text: string
+): Promise<void> {
+  await getClient().multicast({
+    to,
+    messages: [{ type: "text", text: text.slice(0, 4900) }],
+  });
+}
+
+export async function broadcastMessage(text: string): Promise<void> {
+  await getClient().broadcast({
+    messages: [{ type: "text", text: text.slice(0, 4900) }],
+  });
+}
+
+export async function getProfile(userId: string) {
+  return getClient().getProfile(userId);
+}
+
+export async function getBotInfo() {
+  return getClient().getBotInfo();
+}
+
+export async function getMessageQuotaInfo() {
+  const [quota, consumption] = await Promise.all([
+    getClient().getMessageQuota(),
+    getClient().getMessageQuotaConsumption(),
+  ]);
+  return { quota, consumption };
+}
