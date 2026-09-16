@@ -38,12 +38,18 @@ export async function POST(req: Request) {
   let body;
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
   if (body?.action === "check") {
+    let stage = "storage";
     try {
       await checkStorage();
+      stage = "sheet";
       const csv = await getFaqData();
+      stage = "model";
       const answer = await askGemini("ร้านเปิดกี่โมง", csv);
       return json({ storage: "ok", sheet: "ok", model: answer !== DEFAULT_REPLY ? "ok" : "fallback", answer, enabled: process.env.BOT_ENABLED === "true" });
-    } catch { return json({ error: "Storage, Sheet or AI check failed" }, 503); }
+    } catch (error) {
+      const status = error && typeof error === "object" && "status" in error ? Number(error.status) : undefined;
+      return json({ error: "Integration check failed", stage, upstreamStatus: status }, 503);
+    }
   }
   const input = change.safeParse(body);
   if (!input.success) return json({ error: "Invalid userId or mode" }, 400);
