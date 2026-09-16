@@ -7,7 +7,7 @@ import { getProfile, pushMessages, replyMessages } from "./line";
 export function caseCard(name: string, caseId: string, owned: boolean): messagingApi.TemplateMessage {
   return {
     type: "template", altText: `TASANA: ${name.slice(0, 40)} ต้องการเจ้าหน้าที่`,
-    template: { type: "buttons", title: "TASANA · งานดูแลลูกค้า",
+    template: { type: "buttons",
       text: `ลูกค้า: ${name.slice(0, 45)}\n${owned ? "มีผู้รับเคสแล้ว" : "รอรับเรื่อง · บอตพักแล้ว"}\nเคส ${caseId.slice(0, 8)} · ปุ่มมีอายุ 7 วัน`,
       actions: [
         { type: "postback", label: "รับเรื่อง", data: `staff:claim:${caseId}` },

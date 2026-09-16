@@ -49,7 +49,7 @@ export async function POST(req: Request) {
         method: "POST", headers: { Authorization: `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`, "Content-Type": "application/json" },
         body: JSON.stringify({ messages: [caseCard("ทดสอบรูปแบบ", randomUUID(), false)] }), signal: AbortSignal.timeout(5000),
       });
-      return json({ ...checks, cardValidation: validation.ok ? "ok" : "failed", staffCount: staffIds().length }, validation.ok ? 200 : 503);
+      return json({ ...checks, cardValidation: validation.ok ? "ok" : "failed", validationStatus: validation.status, validationDetails: validation.ok ? undefined : await validation.json(), staffCount: staffIds().length }, validation.ok ? 200 : 503);
     } catch { return json({ error: "Staff check failed" }, 503); }
   }
   if (body?.action === "staff-welcome") {
