@@ -138,7 +138,7 @@ test("staff cards contain opaque case buttons and stay inside LINE limits", () =
   const card = caseCard("ช".repeat(100), ticketId, false);
   assert.equal(card.template.type,"buttons");
   if(card.template.type!=="buttons")throw new Error("wrong template");
-  assert.ok(card.template.text.length<=160);
+  assert.ok(card.template.text.length <= (card.template.title || card.template.thumbnailImageUrl ? 60 : 160));
   assert.equal(card.template.actions.length,3);
   assert.ok(!JSON.stringify(card).includes(staffId));
 });
