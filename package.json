@@ -1,15 +1,23 @@
 {
-    "name": "tasana-line-bot-ai",
-        "version": "1.0.0",
-        "private": true,
-        "scripts": {
-          "dev": "next dev",
-                "build": "next build",
-                "start": "next start"
-    },
+  "name": "tasana-line-bot-ai",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
   "dependencies": {
-        "next": "14.2.35",
-              "react": "18.3.1",
-              "react-dom": "18.3.1"
+    "@google/genai": "^2.22.0",
+    "@line/bot-sdk": "^11.2.0",
+    "next": "14.2.35",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "@types/node": "^22.20.3",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7"
   }
 }
