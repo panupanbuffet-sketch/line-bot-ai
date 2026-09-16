@@ -4,7 +4,7 @@ export function stateConfigured() {
   return Boolean((process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL) &&
     (process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN));
 }
-async function command<T>(...args: (string | number)[]): Promise<T> {
+export async function command<T>(...args: (string | number)[]): Promise<T> {
   if (!stateConfigured()) throw new Error("Bot state storage is not configured");
   const response = await fetch((process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL)!, {
     method: "POST", cache: "no-store", signal: AbortSignal.timeout(3000),
@@ -16,10 +16,10 @@ async function command<T>(...args: (string | number)[]): Promise<T> {
   if (body.error || !("result" in body)) throw new Error("Bot storage command failed");
   return body.result as T;
 }
-function key(kind: string, id: string) {
+export function key(kind: string, id: string) {
   return `${process.env.BOT_STATE_NAMESPACE || "tasana-production"}:${kind}:${createHash("sha256").update(id).digest("hex")}`;
 }
-export type ConversationState = { mode: "bot" | "human"; version: string };
+export type ConversationState = { mode: "bot" | "human"; version: string; owner?: string };
 export async function getConversation(userId: string): Promise<ConversationState> {
   const value = await command<string | null>("GET", key("conversation", userId));
   if (value === null) return { mode: "bot", version: "initial" };

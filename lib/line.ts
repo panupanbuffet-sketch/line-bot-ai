@@ -72,3 +72,26 @@ export async function getMessageQuotaInfo() {
   ]);
   return { quota, consumption };
 }
+
+export async function replyMessages(replyToken: string, messages: messagingApi.Message[]) {
+  await getClient().replyMessage({ replyToken, messages });
+}
+// Bounded retries with the same key: a timeout must not duplicate notifications.
+export async function pushMessages(to: string, messages: messagingApi.Message[], retryKey: string) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let response: Response;
+    try {
+      response = await fetch("https://api.line.me/v2/bot/message/push", {
+        method: "POST", signal: AbortSignal.timeout(5000),
+        headers: { Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`, "Content-Type": "application/json", "X-Line-Retry-Key": retryKey },
+        body: JSON.stringify({ to, messages }),
+      });
+    } catch {
+      if (attempt) throw new Error("LINE notification timeout");
+      await new Promise(resolve => setTimeout(resolve, 500)); continue;
+    }
+    if (response.ok || (response.status === 409 && response.headers.has("x-line-accepted-request-id"))) return;
+    if (response.status < 500 || attempt) throw new Error(`LINE notification HTTP ${response.status}`);
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+}

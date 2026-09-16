@@ -99,3 +99,13 @@ do not send messages, call Gemini, or exercise a live Redis database.
 
 References: [LINE webhook events](https://developers.line.biz/en/docs/messaging-api/receiving-messages/),
 [Upstash REST commands](https://upstash.com/docs/redis/features/restapi).
+
+## Staff handoff in LINE
+
+Set `BOT_STAFF_IDS` in Production to comma-separated LINE user IDs approved by the owner. Staff must add this OA as a friend and have separate LINE OA chat access to answer customers. Revocation requires removing the ID and redeploying; forwarded buttons alone never grant access.
+
+When a customer requests an admin (or the AI/data request fails), the bot pauses and pushes a buttons card to enrolled staff. No customer message contents are copied; the card contains the display name, opaque case reference, and controls. `รับเรื่อง` atomically assigns the case to the first staff member. `คืนให้บอต` only works for that assignee. Web-admin changes invalidate existing cards and remain the override for an absent/revoked assignee. Opening LINE OA opens the inbox; select the customer by name there. It does not automatically select a specific customer or send a reply.
+
+Buttons expire after 7 days. Staff can send `งานรอ` to this OA for up to 4 currently paused cases (unassigned or owned by that staff member) among the 20 most recently active contacts. This is a bounded recovery view, not a full historical ticket queue. Other staff text remains normal customer input, allowing the owner to test using the same account. A staff member testing `แอดมิน` receives both the customer acknowledgment and a separate staff card intentionally.
+
+Push notifications use the same LINE retry key for one bounded retry on network/5xx errors. Failed or blocked deliveries are not guaranteed: staff should check the web page or `งานรอ` if needed. No external durable notification worker is configured. Push messages count against the OA message allowance. Atomic claim/release actions are logged in Redis (latest 1,000 entries, expire 30 days after the last action). The admin API provides an authenticated `staff-check` action to verify isolated Redis transitions and validate the LINE card without messaging customers.

@@ -4,6 +4,9 @@ import { getFaqData } from "@/lib/sheet";
 import { askGemini } from "@/lib/gemini";
 import { verifyLineSignature, replyMessage } from "@/lib/line";
 import { handleBotEvent, isTextMessageEvent, type TextEvent } from "@/lib/bot-handler";
+import { isStaffEvent, handleStaffEvent } from "@/lib/staff-handler";
+import { isStaff, actOnCase } from "@/lib/staff-state";
+import { notifyHandoff, pendingCases } from "@/lib/staff-notifications";
 import * as state from "@/lib/bot-state";
 
 export const runtime = "nodejs";
@@ -26,14 +29,16 @@ export async function POST(req: NextRequest) {
   if (!body.events.length) return new Response("OK");
   if (!state.stateConfigured()) return new Response("Bot storage unavailable", { status: 503 });
   if (process.env.BOT_ENABLED !== "true") return new Response("Bot paused");
-  const events = body.events.filter(isTextMessageEvent) as TextEvent[];
+  const events = body.events.filter((e: unknown) => isTextMessageEvent(e) || isStaffEvent(e)) as TextEvent[];
   const users = [...new Set(events.map(event => event.source.userId))];
   // Order preserved within a batch; independent webhook requests may overlap.
   waitUntil(Promise.all(users.map(async userId => {
     for (const event of events.filter(event => event.source.userId === userId)) {
       try {
+        if (isStaffEvent(event) && await handleStaffEvent(event, { isStaff, actOnCase, claimEvent: state.claimEvent, reply: replyMessage, pending: pendingCases })) continue;
+        if (!isTextMessageEvent(event)) continue;
         await state.rememberUser(userId);
-        await handleBotEvent(event, { ...state, answer, reply: replyMessage });
+        await handleBotEvent(event, { ...state, answer, reply: replyMessage, notifyHandoff });
       }
       catch { console.error("Bot event failed; automatic reply suppressed"); }
     }
