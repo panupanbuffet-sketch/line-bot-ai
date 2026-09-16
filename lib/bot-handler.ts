@@ -12,8 +12,8 @@ export interface BotDependencies {
   notifyHandoff?(userId: string): Promise<void>;
 }
 export const HUMAN_REQUESTS = new Set(["แอดมิน", "ติดต่อแอดมิน", "คุยกับเจ้าหน้าที่", "คุยกับพนักงาน", "เจ้าหน้าที่", "admin", "human"]);
-export const HANDOFF_REPLY = "รับเรื่องแล้วค่ะ ระบบตอบอัตโนมัติจะพักให้เจ้าหน้าที่ดูแล ฝากรายละเอียดไว้ในแชตนี้ได้เลยนะคะ หากต้องการคำตอบเร่งด่วน โทร 061-794-7955 ค่ะ";
-export const FAILURE_REPLY = "ขออภัยค่ะ ขณะนี้ตรวจสอบข้อมูลไม่สำเร็จ ระบบจะพักให้เจ้าหน้าที่ช่วยตรวจสอบ กรุณาฝากคำถามไว้ หรือโทร 061-794-7955 ค่ะ";
+export const HANDOFF_REPLY = "รับเรื่องแล้วค่ะ\n\nระบบตอบอัตโนมัติพักแล้ว เพื่อให้เจ้าหน้าที่ดูแลต่อ\nฝากคำถามหรือรายละเอียดไว้ในแชตนี้ได้เลยค่ะ\n\nติดต่อเร่งด่วน\nโทร 061-794-7955";
+export const FAILURE_REPLY = "ขออภัยค่ะ ขณะนี้ตรวจสอบข้อมูลไม่ได้\n\nระบบตอบอัตโนมัติพักแล้ว เพื่อให้เจ้าหน้าที่ช่วยตรวจสอบ\nกรุณาฝากคำถามไว้ในแชตนี้ค่ะ\n\nติดต่อร้าน\nโทร 061-794-7955";
 export function isTextMessageEvent(event: unknown): event is TextEvent {
   if (!event || typeof event !== "object") return false;
   const e = event as TextEvent;

@@ -12,12 +12,12 @@ export default function Admin() {
       method, headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: body ? JSON.stringify(body) : undefined,
     });
-    if (!response.ok) throw new Error(response.status === 401 ? "รหัสผู้ดูแลไม่ถูกต้องหรือยังไม่ได้ตั้งค่า" : "ติดต่อระบบสถานะไม่ได้ กรุณาตรวจการตั้งค่า");
+    if (!response.ok) throw new Error(response.status === 401 ? "รหัสผู้ดูแลไม่ถูกต้องหรือยังไม่ได้ตั้งค่า" : "โหลดหรือบันทึกสถานะไม่ได้ค่ะ กรุณาลองอีกครั้ง");
     return response.json();
   }
   async function refresh() {
     setBusy(true); setMessage("");
-    try { setUsers((await request("GET")).conversations); setMessage("โหลดรายชื่อล่าสุดแล้ว"); }
+    try { setUsers((await request("GET")).conversations); setMessage("อัปเดตรายชื่อล่าสุดแล้วค่ะ"); }
     catch (error) { setMessage((error as Error).message); }
     finally { setBusy(false); }
   }
@@ -26,7 +26,7 @@ export default function Admin() {
     try {
       await request("POST", { userId, mode });
       setUsers(users.map(user => user.userId === userId ? { ...user, mode } : user));
-      setMessage(mode === "human" ? "พักบอตแล้ว เปิด LINE OA เพื่อคุยกับลูกค้าได้" : "คืนงานให้บอตแล้ว บอตจะตอบเมื่อมีข้อความใหม่");
+      setMessage(mode === "human" ? "รับเรื่องสำเร็จค่ะ · บอตพักแล้ว เปิด LINE OA เพื่อตอบลูกค้าได้" : "คืนให้บอตสำเร็จค่ะ · บอตจะตอบเมื่อมีข้อความใหม่");
     } catch (error) { setMessage((error as Error).message); }
     finally { setBusy(false); }
   }
@@ -41,9 +41,9 @@ export default function Admin() {
     <a href="https://chat.line.biz/account/@409xrtpd" target="_blank" rel="noreferrer">เปิดแชต LINE OA</a>
     {users.map(user => <section key={user.userId} style={{ borderTop: "1px solid #ccc", padding: "20px 0" }}>
       <strong>{user.name}</strong><br/><small>{user.userId}</small>
-      <p>{user.mode === "human" ? "เจ้าหน้าที่ดูแล · บอตพักอยู่" : "บอตพร้อมตอบ"}</p>
-      <button disabled={busy || user.mode === "human"} onClick={() => change(user.userId, "human")}>รับช่วง / พักบอต</button>{" "}
-      <button disabled={busy || user.mode === "bot"} onClick={() => change(user.userId, "bot")}>คืนงานให้บอต</button>
+      <p>{user.mode === "human" ? "เจ้าหน้าที่ดูแล · บอตพัก" : "บอตพร้อมตอบ"}</p>
+      <button disabled={busy || user.mode === "human"} onClick={() => change(user.userId, "human")}>รับเรื่อง / พักบอต</button>{" "}
+      <button disabled={busy || user.mode === "bot"} onClick={() => change(user.userId, "bot")}>คืนให้บอต</button>
     </section>)}
   </main>;
 }

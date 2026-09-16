@@ -55,7 +55,7 @@ export async function POST(req: Request) {
   if (body?.action === "staff-welcome") {
     if (typeof body.recipient !== "string" || !isStaff(body.recipient) || typeof body.requestId !== "string" || !/^[0-9a-f-]{36}$/.test(body.requestId)) return json({error:"Invalid recipient or request ID"},400);
     try {
-      await pushMessages(body.recipient, [{type:"text",text:"เปิดระบบพนักงาน TASANA แล้วค่ะ เมื่อมีลูกค้าขอแอดมิน คุณจะได้รับการ์ดพร้อมปุ่ม รับเรื่อง / เปิด LINE OA / คืนให้บอต โดยไม่ต้องใส่รหัสเว็บ\nพิมพ์ ‘งานรอ’ เพื่อดูเคสล่าสุดได้ค่ะ\nหากใช้บัญชีนี้ทดสอบเป็นลูกค้าด้วย เมื่อพิมพ์ ‘แอดมิน’ จะได้รับทั้งข้อความรับเรื่องและการ์ดพนักงาน ซึ่งเป็นคนละหน้าที่ค่ะ"}], body.requestId);
+      await pushMessages(body.recipient, [{type:"text",text:"TASANA · ระบบพนักงานพร้อมใช้งานค่ะ\n\nเมื่อลูกค้าขอแอดมิน คุณจะได้รับการ์ดแจ้งเตือน\n\n1. กด “รับเรื่อง”\n2. กด “เปิด LINE OA” แล้วเลือกชื่อลูกค้าเพื่อตอบ\n3. คุยจบ กด “คืนให้บอต”\n\nพิมพ์ “งานรอ” เพื่อเรียกเคสล่าสุดได้ โดยไม่ต้องใส่รหัสเว็บค่ะ\n\nการทดสอบด้วยบัญชีพนักงานเอง\nเมื่อพิมพ์ “แอดมิน” จะได้รับทั้งข้อความสำหรับลูกค้าและการ์ดพนักงาน ซึ่งเป็นคนละหน้าที่ค่ะ"}], body.requestId);
       return json({sent:true});
     } catch { return json({error:"Notification failed"},503); }
   }
