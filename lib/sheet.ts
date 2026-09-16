@@ -1,6 +1,6 @@
 // Fetches the FAQ / menu reference data (published Google Sheet, CSV format)
-// with a 60s in-memory cache. If a refetch fails, an existing stale cache is
-// served rather than failing the request outright.
+// with a 60s in-memory cache. Failed refreshes are surfaced to the handoff
+// handler instead of serving stale menu prices.
 
 interface SheetCache {
   text: string | null;
@@ -18,23 +18,20 @@ export async function getFaqData(): Promise<string> {
 
   const url = process.env.SHEET_CSV_URL;
   if (!url) {
-    if (cache.text) return cache.text;
     throw new Error("SHEET_CSV_URL is not configured.");
   }
 
   try {
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(5000) });
     if (!res.ok) {
       throw new Error(`Failed to fetch FAQ sheet: ${res.status}`);
     }
     const text = await res.text();
+    if (!text.trim() || /^\s*</.test(text)) throw new Error("Sheet returned empty data or HTML");
     cache = { text, timestamp: now };
     return text;
   } catch (err) {
-    if (cache.text) {
-      console.error("FAQ sheet fetch failed, serving stale cache:", err);
-      return cache.text;
-    }
+    // Do not quote potentially outdated prices after a failed refresh.
     throw err;
   }
 }

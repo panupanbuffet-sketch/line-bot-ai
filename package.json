@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "tsc --module commonjs --moduleResolution node --target es2020 --esModuleInterop --skipLibCheck --outDir .test-build tests/bot.test.ts && node --test .test-build/tests/bot.test.js",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@google/genai": "^2.22.0",

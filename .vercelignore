@@ -1,0 +1,6 @@
+.env*
+.test-build
+.claude
+.mcp.json
+tests
+node_modules
