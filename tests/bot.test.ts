@@ -219,3 +219,42 @@ test("ambiguous menu send failure is not resent or replaced by AI", async () => 
   await handleBotEvent(event("Menu"), f.deps);
   assert.equal(sends, 1); assert.equal(f.calls(), 0); assert.deepEqual(f.replies, []);
 });
+
+import { handleGroupEvent, isGroupEvent, REGISTER_GROUP, GROUP_NAME, type GroupEvent, type GroupDependencies } from "../lib/staff-group";
+const groupId = "C" + "a".repeat(32);
+function groupFixture() {
+  const claimed = new Set<string>(); const replies: string[] = []; let actions = 0, pending = 0, registered: string | null = groupId;
+  const deps: GroupDependencies = {
+    owner: id => id === staffId, group: async () => registered,
+    register: async id => { if (registered && registered !== id) return false; registered = id; return true; },
+    forget: async id => { if (registered === id) registered = null; }, groupName: async () => GROUP_NAME,
+    staff: {isStaff:id=>id===staffId, claimEvent:async id=>{if(claimed.has(id))return false;claimed.add(id);return true;},actOnCase:async()=>{actions++;return "claimed";},reply:async(_,text)=>{replies.push(text);},pending:async()=>{pending++;}}
+  };
+  const e: GroupEvent = {type:"postback",webhookEventId:"group-event",replyToken:"reply",source:{type:"group",groupId,userId:staffId},postback:{data:`staff:claim:${ticketId}`}};
+  return {deps,e,replies,actions:()=>actions,pending:()=>pending,registered:()=>registered};
+}
+test("registered group accepts authorized button once without customer routing",async()=>{
+  const f=groupFixture();assert.equal(isGroupEvent(f.e),true);assert.equal(isTextMessageEvent(f.e),false);
+  await Promise.all([handleGroupEvent(f.e,f.deps),handleGroupEvent(f.e,f.deps)]);assert.equal(f.actions(),1);assert.equal(f.replies.length,1);
+});
+test("group buttons reject other groups, nonstaff, missing identity, and standby",async()=>{
+  for(const source of [{type:"group" as const,groupId:"C"+"b".repeat(32),userId:staffId},{type:"group" as const,groupId,userId:"U"+"b".repeat(32)},{type:"group" as const,groupId}]){
+    const f=groupFixture();await handleGroupEvent({...f.e,source},f.deps);assert.equal(f.actions(),0);assert.equal(f.replies.length,0);
+  }
+  const f=groupFixture();assert.equal(isGroupEvent({...f.e,mode:"standby"}),false);
+});
+test("group registration requires owner and exact group name",async()=>{
+  const f=groupFixture();const e={...f.e,type:"message",message:{type:"text",text:REGISTER_GROUP}};
+  f.deps.owner=()=>false;await handleGroupEvent(e,f.deps);assert.equal(f.replies.length,0);
+  f.deps.owner=()=>true;f.deps.groupName=async()=>"Other";await handleGroupEvent(e,f.deps);assert.match(f.replies[0],/กรุณาตั้งชื่อกลุ่ม/);
+});
+test("normal group chatter remains silent, pending command works, leave disconnects",async()=>{
+  const f=groupFixture();await handleGroupEvent({...f.e,type:"message",postback:undefined,message:{type:"text",text:"Menu"}},f.deps);assert.equal(f.replies.length,0);assert.equal(f.actions(),0);
+  await handleGroupEvent({...f.e,type:"message",postback:undefined,message:{type:"text",text:"งานรอ"}},f.deps);assert.equal(f.pending(),1);
+  await handleGroupEvent({...f.e,type:"leave"},f.deps);assert.equal(f.registered(),null);
+});
+test("private staff action announces even if reply fails",async()=>{
+  let notified=0;
+  const e: StaffEvent={type:"postback",webhookEventId:"private",replyToken:"reply",source:{type:"user",userId:staffId},postback:{data:`staff:claim:${ticketId}`}};
+  await assert.rejects(handleStaffEvent(e,{isStaff:()=>true,claimEvent:async()=>true,actOnCase:async()=>"claimed",reply:async()=>{throw new Error("timeout");},pending:async()=>{},announce:async()=>{notified++;}}));assert.equal(notified,1);
+});

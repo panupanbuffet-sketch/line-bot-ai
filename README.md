@@ -113,3 +113,9 @@ Push notifications use the same LINE retry key for one bounded retry on network/
 ## Thai communication standard
 
 All new bot/customer/staff messages use polite Thai with ค่ะ/คะ, a short outcome or topic first, blank lines between sections, and clear next actions. Single-menu prices have one variant per bullet; full menus use compact named prices grouped by category. Avoid repeated greetings, sales closings, ambiguous slash-separated prices, Markdown tables, and bold markers that LINE does not render. Staff controls consistently use รับเรื่อง, เปิด LINE OA, คืนให้บอต, and งานรอ. Do not promise staff response times, notification delivery, or completed handoff unless the corresponding action has happened. Existing delivered LINE messages/cards are immutable and retain their old wording.
+
+### Staff LINE group
+
+Create `TASANA | รับเรื่องลูกค้า`, invite the TASANA OA, and have the first registered `BOT_STAFF_IDS` account send `เชื่อมกลุ่มรับเรื่อง TASANA` from mobile LINE. Registration uses the signed webhook actor, checks the group name, and atomically binds only the first group. Sending the same command elsewhere cannot replace it. Removing the OA clears that group's binding.
+
+Only allowlisted staff may use case buttons or `งานรอ` in the bound group. Missing actor identity is rejected. Normal group messages never reach the AI. New handoffs notify the group; if a group push fails, personal staff notifications are attempted. Claim/release announcements include the staff display name and case reference. Private staff actions also announce in the bound group. `งานรอ` in the group includes claimed cases, up to four from the latest twenty contacts. Card text is a snapshot; use a new pending query to refresh. Existing Redis atomic ownership and conversation-version guards remain authoritative.

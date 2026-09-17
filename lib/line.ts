@@ -95,3 +95,5 @@ export async function pushMessages(to: string, messages: messagingApi.Message[],
     await new Promise(resolve => setTimeout(resolve, 500));
   }
 }
+
+export async function getGroupSummary(groupId: string) { return getClient().getGroupSummary(groupId); }

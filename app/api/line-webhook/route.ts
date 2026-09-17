@@ -1,13 +1,14 @@
+import { isGroupEvent, handleGroupEvent, staffGroup, registerGroup, forgetGroup } from "@/lib/staff-group";
 import { menuMessages } from "@/lib/menu-cards";
 import type { NextRequest } from "next/server";
 import { waitUntil } from "@vercel/functions";
 import { getFaqData } from "@/lib/sheet";
 import { askGemini } from "@/lib/gemini";
-import { verifyLineSignature, replyMessage, replyMessages } from "@/lib/line";
+import { verifyLineSignature, replyMessage, replyMessages, getGroupSummary } from "@/lib/line";
 import { handleBotEvent, isTextMessageEvent, type TextEvent } from "@/lib/bot-handler";
 import { isStaffEvent, handleStaffEvent } from "@/lib/staff-handler";
-import { isStaff, actOnCase } from "@/lib/staff-state";
-import { notifyHandoff, pendingCases } from "@/lib/staff-notifications";
+import { isStaff, actOnCase, staffIds } from "@/lib/staff-state";
+import { notifyHandoff, pendingCases, staffResultText, announceStaffAction } from "@/lib/staff-notifications";
 import * as state from "@/lib/bot-state";
 
 export const runtime = "nodejs";
@@ -30,13 +31,21 @@ export async function POST(req: NextRequest) {
   if (!body.events.length) return new Response("OK");
   if (!state.stateConfigured()) return new Response("Bot storage unavailable", { status: 503 });
   if (process.env.BOT_ENABLED !== "true") return new Response("Bot paused");
+  const staff = { isStaff, actOnCase, claimEvent: state.claimEvent, reply: replyMessage, pending: pendingCases, resultText: staffResultText };
+  const groupEvents = body.events.filter(isGroupEvent);
+  waitUntil((async () => {
+    for (const event of groupEvents) {
+      try { await handleGroupEvent(event, { staff: {...staff, pending: (id, token) => pendingCases(id, token, true)}, owner: id => id === staffIds()[0], group: staffGroup, register: registerGroup, forget: forgetGroup, groupName: async id => (await getGroupSummary(id)).groupName }); }
+      catch { console.error("Group event failed; no customer AI reply"); }
+    }
+  })());
   const events = body.events.filter((e: unknown) => isTextMessageEvent(e) || isStaffEvent(e)) as TextEvent[];
   const users = [...new Set(events.map(event => event.source.userId))];
   // Order preserved within a batch; independent webhook requests may overlap.
   waitUntil(Promise.all(users.map(async userId => {
     for (const event of events.filter(event => event.source.userId === userId)) {
       try {
-        if (isStaffEvent(event) && await handleStaffEvent(event, { isStaff, actOnCase, claimEvent: state.claimEvent, reply: replyMessage, pending: pendingCases })) continue;
+        if (isStaffEvent(event) && await handleStaffEvent(event, { ...staff, announce: announceStaffAction })) continue;
         if (!isTextMessageEvent(event)) continue;
         await state.rememberUser(userId);
         await handleBotEvent(event, { ...state, answer, reply: replyMessage, replyMenu: (token, language) => replyMessages(token, menuMessages(language)), notifyHandoff });

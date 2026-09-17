@@ -23,6 +23,8 @@ export const STAFF_RESULTS: Record<ActionResult, string> = {
 interface Dependencies {
   isStaff(id: string): boolean; claimEvent(id: string): Promise<boolean>;
   actOnCase(id: string, action: StaffAction, caseId: string): Promise<ActionResult>;
+  resultText?(actor: string, caseId: string, result: ActionResult): Promise<string>;
+  announce?(actor: string, caseId: string, result: ActionResult): Promise<void>;
   reply(token: string, text: string): Promise<void>; pending(id: string, token: string): Promise<void>;
 }
 export async function handleStaffEvent(e: StaffEvent, deps: Dependencies) {
@@ -38,7 +40,10 @@ export async function handleStaffEvent(e: StaffEvent, deps: Dependencies) {
   if (!await deps.claimEvent(e.webhookEventId)) return true;
   if (action) {
     const result = await deps.actOnCase(e.source.userId, action.action, action.caseId);
-    await deps.reply(e.replyToken, STAFF_RESULTS[result]);
+    let text = STAFF_RESULTS[result];
+    if (deps.resultText) { try { text = await deps.resultText(e.source.userId, action.caseId, result); } catch { /* report the action even if profile lookup fails */ } }
+    try { await deps.reply(e.replyToken, text); }
+    finally { if (deps.announce) await deps.announce(e.source.userId, action.caseId, result); }
   } else await deps.pending(e.source.userId, e.replyToken);
   return true;
 }
