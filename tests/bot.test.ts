@@ -30,7 +30,7 @@ test("human request bypasses AI and suppresses subsequent customer messages", as
 });
 test("two concurrent takeover requests acknowledge once", async () => {
   const f = fixture(); await Promise.all([handleBotEvent(event("admin", "a"), f.deps), handleBotEvent(event("admin", "b"), f.deps)]);
-  assert.deepEqual(f.replies, [HANDOFF_REPLY]);
+  assert.deepEqual(f.replies, [ENGLISH_HANDOFF_REPLY]);
 });
 test("takeover while AI is running cancels its reply", async () => {
   const f = fixture(); f.deps.answer = async () => { f.set({ mode: "human", version: "new" }); return "late"; };
@@ -42,7 +42,7 @@ test("pause and resume also discard old generated answer", async () => {
 });
 test("data/AI failure pauses bot and sends one honest fallback", async () => {
   const f = fixture(); f.deps.answer = async () => { throw new Error("sheet unavailable"); };
-  await handleBotEvent(event(), f.deps); assert.deepEqual(f.replies, [FAILURE_REPLY]); assert.equal(f.state().mode, "human");
+  await handleBotEvent(event(), f.deps); assert.deepEqual(f.replies, [ENGLISH_FAILURE_REPLY]); assert.equal(f.state().mode, "human");
 });
 test("unavailable state fails closed without calling AI", async () => {
   const f = fixture(); f.deps.getConversation = async () => { throw new Error("offline"); };
@@ -160,3 +160,17 @@ test("notification quota/auth errors are not blindly retried", async () => {
   try {await assert.rejects(pushMessages(staffId,[{type:"text",text:"test"}],ticketId));assert.equal(calls,1);}
   finally {global.fetch=original;}
 });
+
+import { replyLanguage } from "../lib/reply-language";
+import { ENGLISH_HANDOFF_REPLY, ENGLISH_FAILURE_REPLY } from "../lib/bot-handler";
+test("reply language supports English, Thai, and mixed menu questions", () => {
+  assert.equal(replyLanguage("How much is a latte?"), "en");
+  assert.equal(replyLanguage("Latte ราคาเท่าไร"), "th");
+  assert.equal(replyLanguage("ตอบเป็นภาษาอังกฤษ"), "en");
+  assert.equal(replyLanguage("Reply in Thai"), "th");
+  assert.equal(replyLanguage("123"), "th");
+  assert.match(ENGLISH_HANDOFF_REPLY, /paused/);
+  assert.match(ENGLISH_FAILURE_REPLY, /061-794-7955/);
+});
+
+test("Thai failure remains Thai", async () => { const f = fixture(); f.deps.answer = async () => { throw new Error("offline"); }; await handleBotEvent(event("ราคา"), f.deps); assert.deepEqual(f.replies, [FAILURE_REPLY]); });

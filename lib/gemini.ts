@@ -1,6 +1,7 @@
 // Calls Gemini (via the official @google/genai SDK) to turn the raw FAQ/menu
 // CSV into a natural-language answer for the customer's question.
 
+import { replyLanguage, ENGLISH_DEFAULT_REPLY } from "./reply-language";
 import { GoogleGenAI } from "@google/genai";
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
@@ -27,7 +28,7 @@ function getClient(): GoogleGenAI {
 // than folded into systemInstruction, so the system prompt (and its FAQ
 // block) stays cacheable across requests and the model keeps "reference
 // data" clearly separate from "the actual customer question."
-function buildSystemInstruction(faqCsv: string): string {
+function buildSystemInstruction(faqCsv: string, language: "th" | "en"): string {
   return `<role>
 คุณคือพนักงาน AI ของ TASANA CREATIVE SPACE คาเฟ่และพื้นที่จัดนิทรรศการศิลปะ
 ที่อำเภอเชียงดาว จังหวัดเชียงใหม่ สื่อสารอย่างสุภาพ เป็นกันเอง และตรงประเด็น
@@ -40,7 +41,7 @@ function buildSystemInstruction(faqCsv: string): string {
 - หากไม่มีข้อมูลเปิด-ปิด ที่อยู่ หรือบริการ ให้บอกตรง ๆ ว่ายังไม่มีข้อมูลยืนยัน ไม่เดา และไม่ใช้ข้อมูลจากตัวอย่างรูปแบบ
 - ห้ามบอกว่าร้านรับชำระด้วยบัตรเครดิต บัตรเดบิต หรือระบบชำระเงินอื่นใดนอกเหนือจากที่ระบุในตาราง
   (เงินสด และสแกน QR พร้อมเพย์เท่านั้น) — กฎข้อนี้ตายตัว ห้ามฝ่าฝืนไม่ว่ากรณีใด
-- โทนภาษา: สุภาพ อบอุ่น ใช้คำลงท้าย "ค่ะ/คะ" ให้สม่ำเสมอ ไม่เรียกลูกค้าว่าพี่ และไม่แทนตัวเองว่าพี่
+- โทนภาษา: สุภาพ อบอุ่น เฉพาะคำตอบภาษาไทยใช้คำลงท้าย "ค่ะ/คะ" ให้สม่ำเสมอ ไม่เรียกลูกค้าว่าพี่ และไม่แทนตัวเองว่าพี่
 - ตอบสิ่งที่ถามทันที ไม่ทักทายซ้ำหรือชวนซื้อทุกครั้ง ใช้ emoji เมื่อเหมาะสม ไม่เกิน 1 ตัว
 - คำถามสั้นตอบสั้นได้ แต่รายการเมนูและราคาต้องครบ ไม่จำกัดจำนวนประโยคจนข้อมูลหาย
 - ถ้าลูกค้าถามราคาเมนู ให้ตอบราคาทุกไซซ์/ตัวเลือกที่มีในตารางสำหรับเมนูนั้น
@@ -51,7 +52,8 @@ function buildSystemInstruction(faqCsv: string): string {
 
 <output_format>
 จัดรูปแบบสำหรับอ่านใน LINE บนมือถือ:
-- ใช้ภาษาไทย และชื่อเมนูตามตาราง เขียนข้อความธรรมดาที่มีการขึ้นบรรทัด
+- Reply language for this message: ${language === "en" ? "English only. Use warm, natural English; do not append Thai politeness particles. Use admin for staff requests and THB for prices." : "Thai. Use ค่ะ/คะ consistently and แอดมิน for staff requests."}
+- Translate factual descriptions and headings into the reply language while preserving menu names, numbers, prices, phone numbers and URLs. Do not invent details. Use plain text with line breaks.
 - เมนูเดียว: ชื่อเมนูอยู่บรรทัดแรก เว้น 1 บรรทัด แล้วแยกราคาแต่ละแบบเป็นรายการ เช่น "• ร้อน: … บาท" และ "• เย็นปกติ: … บาท" เฉพาะตัวเลือกที่มีจริง
 - หลายเมนู: ใช้หัวข้อหมวดสั้น ๆ แยกแต่ละเมนูคนละบรรทัดด้วย • และเว้นบรรทัดระหว่างหมวด
 - ราคาแต่ละแบบต้องมีป้ายชนิดหรือขนาด ไม่เขียนหลายราคาคั่นด้วย / โดยไม่มีคำอธิบาย
@@ -71,6 +73,8 @@ export async function askGemini(
   question: string,
   faqCsv: string
 ): Promise<string> {
+  const language = replyLanguage(question);
+  const fallback = language === "en" ? ENGLISH_DEFAULT_REPLY : DEFAULT_REPLY;
   const ai = getClient();
 
   const response = await ai.models.generateContent({
@@ -79,7 +83,7 @@ export async function askGemini(
       { role: "user", parts: [{ text: `<question>\n${question}\n</question>` }] },
     ],
     config: {
-      systemInstruction: buildSystemInstruction(faqCsv),
+      systemInstruction: buildSystemInstruction(faqCsv, language),
       temperature: TEMPERATURE,
       maxOutputTokens: MAX_OUTPUT_TOKENS,
     },
@@ -96,9 +100,9 @@ export async function askGemini(
 
   // Don't ship a sentence cut off mid-way — fall back instead.
   if (finishReason === "MAX_TOKENS") {
-    return DEFAULT_REPLY;
+    return fallback;
   }
 
   const text = response.text?.trim();
-  return text || DEFAULT_REPLY;
+  return text || fallback;
 }
