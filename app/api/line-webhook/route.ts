@@ -1,8 +1,9 @@
+import { menuMessages } from "@/lib/menu-cards";
 import type { NextRequest } from "next/server";
 import { waitUntil } from "@vercel/functions";
 import { getFaqData } from "@/lib/sheet";
 import { askGemini } from "@/lib/gemini";
-import { verifyLineSignature, replyMessage } from "@/lib/line";
+import { verifyLineSignature, replyMessage, replyMessages } from "@/lib/line";
 import { handleBotEvent, isTextMessageEvent, type TextEvent } from "@/lib/bot-handler";
 import { isStaffEvent, handleStaffEvent } from "@/lib/staff-handler";
 import { isStaff, actOnCase } from "@/lib/staff-state";
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
         if (isStaffEvent(event) && await handleStaffEvent(event, { isStaff, actOnCase, claimEvent: state.claimEvent, reply: replyMessage, pending: pendingCases })) continue;
         if (!isTextMessageEvent(event)) continue;
         await state.rememberUser(userId);
-        await handleBotEvent(event, { ...state, answer, reply: replyMessage, notifyHandoff });
+        await handleBotEvent(event, { ...state, answer, reply: replyMessage, replyMenu: (token, language) => replyMessages(token, menuMessages(language)), notifyHandoff });
       }
       catch { console.error("Bot event failed; automatic reply suppressed"); }
     }

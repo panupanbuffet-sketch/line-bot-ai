@@ -174,3 +174,48 @@ test("reply language supports English, Thai, and mixed menu questions", () => {
 });
 
 test("Thai failure remains Thai", async () => { const f = fixture(); f.deps.answer = async () => { throw new Error("offline"); }; await handleBotEvent(event("ราคา"), f.deps); assert.deepEqual(f.replies, [FAILURE_REPLY]); });
+
+import { isMenuRequest, menuMessages } from "../lib/menu-cards";
+test("menu entry sends five cards once without invoking AI", async () => {
+  const f = fixture(); const sent: string[] = [];
+  f.deps.replyMenu = async (_, lang) => { sent.push(lang); };
+  await Promise.all([handleBotEvent(event(" Menu "), f.deps), handleBotEvent(event(" Menu "), f.deps)]);
+  assert.deepEqual(sent, ["en"]); assert.equal(f.calls(), 0); assert.deepEqual(f.replies, []);
+});
+test("Thai menu entry chooses Thai follow-up actions", async () => {
+  const f = fixture(); let language = "";
+  f.deps.replyMenu = async (_, lang) => { language = lang; };
+  await handleBotEvent(event("เมนู"), f.deps); assert.equal(language, "th");
+  const messages = menuMessages("th"); const card = messages[1];
+  assert.equal(messages.length, 2); assert.equal(card.type, "flex");
+  if (card.type !== "flex" || card.contents.type !== "carousel") throw new Error("Expected carousel");
+  assert.equal(card.contents.contents.length, 5);
+  assert.match(JSON.stringify(card), /กาแฟ/);
+  for (const bubble of card.contents.contents) {
+    assert.equal(bubble.hero?.type, "image");
+    assert.match(JSON.stringify(bubble.hero), /https:\/\/line-bot-ai-nine\.vercel\.app\/menu\/2026-09-18\//);
+  }
+});
+test("paused conversation and changed version suppress menu cards", async () => {
+  for (const paused of [true, false]) {
+    const f = fixture(); let sends = 0;
+    f.deps.replyMenu = async () => { sends++; };
+    if (paused) f.set({ mode: "human", version: "paused" });
+    else f.deps.canReply = async () => false;
+    await handleBotEvent(event("Menu"), f.deps); assert.equal(sends, 0); assert.equal(f.calls(), 0);
+  }
+});
+test("specific menu questions and category buttons still use AI", async () => {
+  for (const text of ["Coffee", "Tea", "ลาเต้ราคาเท่าไร", "Menu prices for latte"]) {
+    const f = fixture(); f.deps.replyMenu = async () => { throw new Error("unexpected cards"); };
+    await handleBotEvent(event(text), f.deps); assert.equal(f.calls(), 1);
+    assert.equal(isMenuRequest(text), false);
+  }
+});
+test("ambiguous menu send failure is not resent or replaced by AI", async () => {
+  const f = fixture(); let sends = 0;
+  f.deps.replyMenu = async () => { sends++; throw new Error("timeout"); };
+  await assert.rejects(handleBotEvent(event("Menu"), f.deps));
+  await handleBotEvent(event("Menu"), f.deps);
+  assert.equal(sends, 1); assert.equal(f.calls(), 0); assert.deepEqual(f.replies, []);
+});

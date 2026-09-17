@@ -1,3 +1,4 @@
+import { isMenuRequest } from "./menu-cards";
 import { replyLanguage } from "./reply-language";
 import type { LineWebhookEvent, LineTextMessage } from "../types/index";
 
@@ -10,6 +11,7 @@ export interface BotDependencies {
   canReply(id: string, version: string): Promise<boolean>;
   answer(question: string): Promise<string>;
   reply(token: string, text: string): Promise<void>;
+  replyMenu?(token: string, language: "th" | "en"): Promise<void>;
   notifyHandoff?(userId: string): Promise<void>;
 }
 export const HUMAN_REQUESTS = new Set(["แอดมิน", "ติดต่อแอดมิน", "คุยกับเจ้าหน้าที่", "คุยกับพนักงาน", "เจ้าหน้าที่", "admin", "human", "staff", "talk to staff", "talk to a human", "contact staff"]);
@@ -35,6 +37,13 @@ export async function handleBotEvent(event: TextEvent, deps: BotDependencies) {
   if (HUMAN_REQUESTS.has(event.message.text.trim().toLowerCase())) {
     if (await deps.pauseConversation(userId, state.version)) {
       await Promise.all([deps.reply(event.replyToken, english ? ENGLISH_HANDOFF_REPLY : HANDOFF_REPLY), deps.notifyHandoff?.(userId)]);
+    }
+    return;
+  }
+  if (deps.replyMenu && isMenuRequest(event.message.text)) {
+    // Same admission and version guard as text replies; never invoke AI too.
+    if (await deps.canReply(userId, state.version)) {
+      await deps.replyMenu(event.replyToken, english ? "en" : "th");
     }
     return;
   }
