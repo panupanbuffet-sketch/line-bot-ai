@@ -2,17 +2,17 @@ import type { messagingApi } from "@line/bot-sdk";
 import type { ReplyLanguage } from "./reply-language";
 
 export const REWARDS_URL = "https://u.lin.ee/YyldygT";
-const REQUESTS = new Set(["rewards", "reward", "loyalty", "loyalty card", "points", "my points", "tasana circle", "สะสมแต้ม", "บัตรสะสมแต้ม", "ดูแต้ม", "แต้ม", "สิทธิพิเศษ"]);
+const REQUESTS = new Set(["rewards", "reward", "loyalty", "loyalty card", "points", "my points", "tasana circle", "tasana rewards", "สะสมแต้ม", "บัตรสะสมแต้ม", "ดูแต้ม", "แต้ม", "สิทธิพิเศษ"]);
 export function isRewardsRequest(text: string): boolean {
   return REQUESTS.has(text.normalize("NFKC").trim().toLowerCase().replace(/\s+/g, " "));
 }
 export function rewardsMessages(language: ReplyLanguage): messagingApi.Message[] {
   const th = language === "th";
-  return [{ type: "flex", altText: "TASANA Circle | 10 points = THB 80 off",
+  return [{ type: "flex", altText: "TASANA Rewards | 10 points = THB 80 off",
     contents: { type: "bubble", size: "mega",
       body: { type: "box", layout: "vertical", backgroundColor: "#F8F7F0", paddingAll: "24px", spacing: "lg", contents: [
         { type: "text", text: "TASANA CREATIVE SPACE", size: "xxs", color: "#78846B" },
-        { type: "text", text: "TASANA Circle", size: "xl", color: "#252F23", weight: "bold" },
+        { type: "text", text: "TASANA Rewards", size: "xl", color: "#252F23", weight: "bold" },
         { type: "text", text: th ? "1 แก้ว • 1 แต้ม\nครบ 10 แต้ม รับส่วนลด 80 บาท" : "1 drink • 1 point\n10 points = THB 80 off", size: "md", color: "#252F23", wrap: true },
         { type: "separator", color: "#E1E4D9" },
         { type: "text", text: th
