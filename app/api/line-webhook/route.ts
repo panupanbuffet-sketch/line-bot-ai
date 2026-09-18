@@ -1,5 +1,6 @@
 import { isGroupEvent, handleGroupEvent, staffGroup, registerGroup, forgetGroup } from "@/lib/staff-group";
 import { menuMessages } from "@/lib/menu-cards";
+import { rewardsMessages } from "@/lib/rewards";
 import type { NextRequest } from "next/server";
 import { waitUntil } from "@vercel/functions";
 import { getFaqData } from "@/lib/sheet";
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
         if (isStaffEvent(event) && await handleStaffEvent(event, { ...staff, announce: announceStaffAction })) continue;
         if (!isTextMessageEvent(event)) continue;
         await state.rememberUser(userId);
-        await handleBotEvent(event, { ...state, answer, reply: replyMessage, replyMenu: (token, language) => replyMessages(token, menuMessages(language)), notifyHandoff });
+        await handleBotEvent(event, { ...state, answer, reply: replyMessage, replyMenu: (token, language) => replyMessages(token, menuMessages(language)), replyRewards: (token, language) => replyMessages(token, rewardsMessages(language)), notifyHandoff });
       }
       catch { console.error("Bot event failed; automatic reply suppressed"); }
     }

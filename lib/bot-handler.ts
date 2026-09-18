@@ -1,4 +1,5 @@
 import { isMenuRequest } from "./menu-cards";
+import { isRewardsRequest } from "./rewards";
 import { replyLanguage } from "./reply-language";
 import type { LineWebhookEvent, LineTextMessage } from "../types/index";
 
@@ -12,6 +13,7 @@ export interface BotDependencies {
   answer(question: string): Promise<string>;
   reply(token: string, text: string): Promise<void>;
   replyMenu?(token: string, language: "th" | "en"): Promise<void>;
+  replyRewards?(token: string, language: "th" | "en"): Promise<void>;
   notifyHandoff?(userId: string): Promise<void>;
 }
 export const HUMAN_REQUESTS = new Set(["แอดมิน", "ติดต่อแอดมิน", "คุยกับเจ้าหน้าที่", "คุยกับพนักงาน", "เจ้าหน้าที่", "admin", "human", "staff", "talk to staff", "talk to a human", "contact staff"]);
@@ -44,6 +46,12 @@ export async function handleBotEvent(event: TextEvent, deps: BotDependencies) {
     // Same admission and version guard as text replies; never invoke AI too.
     if (await deps.canReply(userId, state.version)) {
       await deps.replyMenu(event.replyToken, english ? "en" : "th");
+    }
+    return;
+  }
+  if (deps.replyRewards && isRewardsRequest(event.message.text)) {
+    if (await deps.canReply(userId, state.version)) {
+      await deps.replyRewards(event.replyToken, english ? "en" : "th");
     }
     return;
   }

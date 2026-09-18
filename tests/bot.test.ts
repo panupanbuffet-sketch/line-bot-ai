@@ -176,6 +176,34 @@ test("reply language supports English, Thai, and mixed menu questions", () => {
 test("Thai failure remains Thai", async () => { const f = fixture(); f.deps.answer = async () => { throw new Error("offline"); }; await handleBotEvent(event("ราคา"), f.deps); assert.deepEqual(f.replies, [FAILURE_REPLY]); });
 
 import { isMenuRequest, menuMessages } from "../lib/menu-cards";
+import { rewardsMessages, REWARDS_URL } from "../lib/rewards";
+test("rewards uses the live card link and bypasses AI once in either language", async () => {
+  for (const [text, language] of [[" Rewards ", "en"], ["สะสมแต้ม", "th"]]) {
+    const f = fixture(); const sent: string[] = [];
+    f.deps.replyRewards = async (_, lang) => { sent.push(lang); };
+    await Promise.all([handleBotEvent(event(text), f.deps), handleBotEvent(event(text), f.deps)]);
+    assert.deepEqual(sent, [language]); assert.equal(f.calls(), 0);
+    const payload = JSON.stringify(rewardsMessages(language as "th" | "en"));
+    assert.ok(payload.includes(REWARDS_URL)); assert.ok(payload.includes("80"));
+  }
+});
+test("rewards respects staff takeover and conversation version", async () => {
+  for (const paused of [true, false]) {
+    const f = fixture(); let sends = 0;
+    f.deps.replyRewards = async () => { sends++; };
+    if (paused) f.set({mode:"human", version:"paused"});
+    else f.deps.canReply = async () => false;
+    await handleBotEvent(event("Rewards"), f.deps);
+    assert.equal(sends, 0); assert.equal(f.calls(), 0);
+  }
+});
+test("failed rewards send is not replaced with AI or repeated on redelivery", async () => {
+  const f = fixture(); let sends = 0;
+  f.deps.replyRewards = async () => { sends++; throw new Error("timeout"); };
+  await assert.rejects(handleBotEvent(event("Rewards"), f.deps));
+  await handleBotEvent(event("Rewards"), f.deps);
+  assert.equal(sends, 1); assert.equal(f.calls(), 0);
+});
 test("menu entry sends five cards once without invoking AI", async () => {
   const f = fixture(); const sent: string[] = [];
   f.deps.replyMenu = async (_, lang) => { sent.push(lang); };
