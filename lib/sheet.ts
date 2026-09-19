@@ -1,3 +1,5 @@
+import { SHOP_HOURS_REFERENCE } from "./shop-hours";
+
 // Fetches the FAQ / menu reference data (published Google Sheet, CSV format)
 // with a 60s in-memory cache. Failed refreshes are surfaced to the handoff
 // handler instead of serving stale menu prices.
@@ -28,8 +30,9 @@ export async function getFaqData(): Promise<string> {
     }
     const text = await res.text();
     if (!text.trim() || /^\s*</.test(text)) throw new Error("Sheet returned empty data or HTML");
-    cache = { text, timestamp: now };
-    return text;
+    const reference = `${text}\n\n[Verified regular opening hours]\n${SHOP_HOURS_REFERENCE}`;
+    cache = { text: reference, timestamp: now };
+    return reference;
   } catch (err) {
     // Do not quote potentially outdated prices after a failed refresh.
     throw err;

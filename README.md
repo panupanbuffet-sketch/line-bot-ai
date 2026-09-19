@@ -119,3 +119,13 @@ All new bot/customer/staff messages use polite Thai with ค่ะ/คะ, a sho
 Create `TASANA | รับเรื่องลูกค้า`, invite the TASANA OA, and have the first registered `BOT_STAFF_IDS` account send `เชื่อมกลุ่มรับเรื่อง TASANA` from mobile LINE. Registration uses the signed webhook actor, checks the group name, and atomically binds only the first group. Sending the same command elsewhere cannot replace it. Removing the OA clears that group's binding.
 
 Only allowlisted staff may use case buttons or `งานรอ` in the bound group. Missing actor identity is rejected. Normal group messages never reach the AI. New handoffs notify the group; if a group push fails, personal staff notifications are attempted. Claim/release announcements include the staff display name and case reference. Private staff actions also announce in the bound group. `งานรอ` in the group includes claimed cases, up to four from the latest twenty contacts. Card text is a snapshot; use a new pending query to refresh. Existing Redis atomic ownership and conversation-version guards remain authoritative.
+
+## Regular opening hours reference
+
+`lib/shop-hours.ts` supplies a verified snapshot from `Line oa New` →
+`ข้อมูลร้านและ FAQ` row 14 (read 2026-09-19). The live CSV currently lacks these
+facts and the FAQ tab is not publicly readable via the standard CSV export.
+This snapshot is appended to the successfully fetched menu data; it does not
+replace menu prices, bypass failed refreshes, or assert special holiday opening.
+Update this file and redeploy when regular hours change. Editing the Sheet alone
+does not automatically update this snapshot.

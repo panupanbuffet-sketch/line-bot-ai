@@ -79,7 +79,13 @@ test("sheet rejects HTML and does not return stale prices after refresh failure"
     global.fetch = async () => new Response("<html>Sign in</html>");
     await assert.rejects(getFaqData(), /HTML/);
     global.fetch = async () => new Response("menu,price\nLatte,80");
-    assert.match(await getFaqData(), /Latte/);
+    const reference = await getFaqData();
+    assert.match(reference, /Latte,80/);
+    assert.match(reference, /จันทร์–ศุกร์: 08:30–17:00/);
+    assert.match(reference, /เสาร์: 08:30–17:30/);
+    assert.match(reference, /อาทิตย์: 08:30–17:00/);
+    assert.match(reference, /วันหยุดพิเศษ/);
+    assert.equal(await getFaqData(), reference);
     Date.now = () => now() + 61000;
     global.fetch = async () => new Response("Unavailable", { status: 503 });
     await assert.rejects(getFaqData(), /503/);
