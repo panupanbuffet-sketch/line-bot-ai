@@ -129,3 +129,13 @@ This snapshot is appended to the successfully fetched menu data; it does not
 replace menu prices, bypass failed refreshes, or assert special holiday opening.
 Update this file and redeploy when regular hours change. Editing the Sheet alone
 does not automatically update this snapshot.
+
+## Live shop FAQ
+
+Set `SHOP_FAQ_CSV_URL` to the published CSV URL for the `ข้อมูลร้านและ FAQ`
+tab (gid 483817067) in the source spreadsheet. Publish only this approved tab,
+not the `ข้อมูลรอยืนยัน` tab. The bot loads both menu and FAQ with a 60-second
+in-memory cache. Live FAQ replaces the static hours snapshot entirely. A failed
+FAQ refresh triggers the existing handoff path instead of quoting stale hours.
+Without this variable, the existing static snapshot remains in use.
+Configure the URL and redeploy before claiming live FAQ synchronization is active.

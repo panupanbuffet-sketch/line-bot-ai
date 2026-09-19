@@ -292,3 +292,30 @@ test("private staff action announces even if reply fails",async()=>{
   const e: StaffEvent={type:"postback",webhookEventId:"private",replyToken:"reply",source:{type:"user",userId:staffId},postback:{data:`staff:claim:${ticketId}`}};
   await assert.rejects(handleStaffEvent(e,{isStaff:()=>true,claimEvent:async()=>true,actOnCase:async()=>"claimed",reply:async()=>{throw new Error("timeout");},pending:async()=>{},announce:async()=>{notified++;}}));assert.equal(notified,1);
 });
+
+
+test("live shop FAQ replaces snapshot and refresh failure does not serve old hours", async () => {
+  const original = global.fetch; const now = Date.now;
+  let clock = now() + 120000;
+  Date.now = () => clock;
+  process.env.SHEET_CSV_URL = "https://test.invalid/menu.csv";
+  process.env.SHOP_FAQ_CSV_URL = "https://test.invalid/faq.csv";
+  let hours = "09:00–16:00";
+  let fail = false;
+  global.fetch = async (url) => String(url).endsWith("faq.csv")
+    ? new Response(fail ? "<html>Sign in</html>" : `question,answer\nHours,${hours}`)
+    : new Response("menu,price\nLatte,80");
+  try {
+    const first = await getFaqData();
+    assert.match(first, /09:00–16:00/);
+    assert.match(first, /Latte,80/);
+    assert.doesNotMatch(first, /08:30/);
+    hours = "10:00–15:00"; clock += 61000;
+    assert.match(await getFaqData(), /10:00–15:00/);
+    fail = true; clock += 61000;
+    await assert.rejects(getFaqData(), /HTML/);
+  } finally {
+    global.fetch = original; Date.now = now;
+    delete process.env.SHEET_CSV_URL; delete process.env.SHOP_FAQ_CSV_URL;
+  }
+});

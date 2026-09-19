@@ -30,7 +30,15 @@ export async function getFaqData(): Promise<string> {
     }
     const text = await res.text();
     if (!text.trim() || /^\s*</.test(text)) throw new Error("Sheet returned empty data or HTML");
-    const reference = `${text}\n\n[Verified regular opening hours]\n${SHOP_HOURS_REFERENCE}`;
+    const faqUrl = process.env.SHOP_FAQ_CSV_URL;
+    let faq = SHOP_HOURS_REFERENCE;
+    if (faqUrl) {
+      const faqRes = await fetch(faqUrl, { cache: "no-store", signal: AbortSignal.timeout(5000) });
+      if (!faqRes.ok) throw new Error(`Failed to fetch shop FAQ: ${faqRes.status}`);
+      faq = await faqRes.text();
+      if (!faq.trim() || /^\s*</.test(faq)) throw new Error("Shop FAQ returned empty data or HTML");
+    }
+    const reference = `${text}\n\n[Shop FAQ and regular opening hours]\n${faq}`;
     cache = { text: reference, timestamp: now };
     return reference;
   } catch (err) {
